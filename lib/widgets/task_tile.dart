@@ -20,10 +20,12 @@ class TaskTile extends StatelessWidget {
     return Stardew.wood;
   }
 
+  /// Priority badge. Text wraps instead of being cut off.
   Widget _badge(String text, Color color) {
     final dark = color == Stardew.gold;
+    final fg = dark ? Stardew.ink : Colors.white;
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
         color: color,
         borderRadius: BorderRadius.circular(3),
@@ -31,16 +33,23 @@ class TaskTile extends StatelessWidget {
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(Icons.flag,
-              size: 13, color: dark ? Stardew.ink : Colors.white),
+          Padding(
+            padding: const EdgeInsets.only(top: 1),
+            child: Icon(Icons.flag, size: 13, color: fg),
+          ),
           const SizedBox(width: 4),
-          Text(
-            text,
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w700,
-              color: dark ? Stardew.ink : Colors.white,
+          Flexible(
+            child: Text(
+              text,
+              textAlign: TextAlign.left,
+              softWrap: true,
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+                color: fg,
+              ),
             ),
           ),
         ],
@@ -48,9 +57,10 @@ class TaskTile extends StatelessWidget {
     );
   }
 
+  /// Category chip. Text wraps instead of being cut off.
   Widget _chip(IconData icon, String text) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
         color: Stardew.parchmentLight,
         borderRadius: BorderRadius.circular(3),
@@ -58,30 +68,44 @@ class TaskTile extends StatelessWidget {
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, size: 13, color: Stardew.mutedInk),
+          Padding(
+            padding: const EdgeInsets.only(top: 1),
+            child: Icon(icon, size: 13, color: Stardew.mutedInk),
+          ),
           const SizedBox(width: 4),
-          Text(
-            text,
-            style: const TextStyle(fontSize: 12, color: Stardew.ink),
+          Flexible(
+            child: Text(
+              text,
+              textAlign: TextAlign.left,
+              softWrap: true,
+              style: const TextStyle(fontSize: 12, color: Stardew.ink),
+            ),
           ),
         ],
       ),
     );
   }
 
-  Widget _info(IconData icon, String text) {
+  /// Icon + text row that wraps onto more lines when long.
+  Widget _info(IconData icon, String text, {Color? color, double size = 13}) {
+    final c = color ?? Stardew.mutedInk;
     return Row(
       mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Icon(icon, size: 15, color: Stardew.mutedInk),
+        Padding(
+          padding: const EdgeInsets.only(top: 2),
+          child: Icon(icon, size: 15, color: c),
+        ),
         const SizedBox(width: 4),
         Flexible(
           child: Text(
             text,
             textAlign: TextAlign.left,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(fontSize: 13, color: Stardew.mutedInk),
+            softWrap: true,
+            style: TextStyle(fontSize: size, color: c),
           ),
         ),
       ],
@@ -99,7 +123,7 @@ class TaskTile extends StatelessWidget {
 
     final dateText = task.time.trim().isEmpty
         ? formatDate(task.date)
-        : '${formatDate(task.date)} - ${task.time}';
+        : '${formatDate(task.date)} - ${task.time.trim()}';
 
     final stripe =
         task.isDone ? Stardew.grass : _priorityColor(task.priority);
@@ -109,13 +133,6 @@ class TaskTile extends StatelessWidget {
         _badge(task.priority.trim(), _priorityColor(task.priority)),
       if (task.category.trim().isNotEmpty)
         _chip(Icons.label_outline, task.category.trim()),
-    ];
-
-    final infos = <Widget>[
-      if (task.location.trim().isNotEmpty)
-        _info(Icons.place_outlined, task.location.trim()),
-      if (task.assignedTo.trim().isNotEmpty)
-        _info(Icons.person_outline, task.assignedTo.trim()),
     ];
 
     return Container(
@@ -145,107 +162,111 @@ class TaskTile extends StatelessWidget {
               Expanded(
                 child: Material(
                   color: Colors.transparent,
-                  child: ListTile(
-                    contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 10, vertical: 6),
+                  child: InkWell(
                     onTap: () => showTaskFormDialog(context, task: task),
-                    leading: Checkbox(
-                      value: task.isDone,
-                      onChanged: (_) => TaskRepository.toggleDone(task),
-                    ),
-                    title: Text(
-                      task.title,
-                      textAlign: TextAlign.left,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w700,
-                        decoration:
-                            task.isDone ? TextDecoration.lineThrough : null,
-                        color: task.isDone ? Stardew.mutedInk : Stardew.ink,
-                      ),
-                    ),
-                    subtitle: Padding(
-                      padding: const EdgeInsets.only(top: 4),
-                      child: Column(
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(6, 10, 4, 10),
+                      child: Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          if (task.description.trim().isNotEmpty)
-                            Padding(
-                              padding: const EdgeInsets.only(bottom: 4),
-                              child: Text(
-                                task.description,
-                                textAlign: TextAlign.left,
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                                style: textTheme.bodyMedium
-                                    ?.copyWith(color: Stardew.ink),
-                              ),
-                            ),
-                          Row(
-                            children: [
-                              Icon(
-                                Icons.event,
-                                size: 16,
-                                color: overdue
-                                    ? Stardew.red
-                                    : Stardew.grassDark,
-                              ),
-                              const SizedBox(width: 6),
-                              Flexible(
-                                child: Text(
-                                  overdue ? '$dateText (overdue)' : dateText,
-                                  textAlign: TextAlign.left,
-                                  style: textTheme.bodyMedium?.copyWith(
-                                    color: overdue
-                                        ? Stardew.red
-                                        : Stardew.mutedInk,
-                                  ),
-                                ),
-                              ),
-                            ],
+                          Checkbox(
+                            value: task.isDone,
+                            onChanged: (_) =>
+                                TaskRepository.toggleDone(task),
                           ),
-                          if (badges.isNotEmpty)
-                            Padding(
-                              padding: const EdgeInsets.only(top: 6),
-                              child: Wrap(
-                                spacing: 6,
-                                runSpacing: 4,
-                                children: badges,
+                          const SizedBox(width: 4),
+                          // Everything wraps and grows with the text.
+                          Expanded(
+                            child: Padding(
+                              padding: const EdgeInsets.only(top: 8),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    task.title,
+                                    textAlign: TextAlign.left,
+                                    softWrap: true,
+                                    style: textTheme.titleMedium?.copyWith(
+                                      fontWeight: FontWeight.w700,
+                                      decoration: task.isDone
+                                          ? TextDecoration.lineThrough
+                                          : null,
+                                      color: task.isDone
+                                          ? Stardew.mutedInk
+                                          : Stardew.ink,
+                                    ),
+                                  ),
+                                  if (task.description.trim().isNotEmpty)
+                                    Padding(
+                                      padding: const EdgeInsets.only(top: 6),
+                                      child: Text(
+                                        task.description.trim(),
+                                        textAlign: TextAlign.left,
+                                        softWrap: true,
+                                        style: textTheme.bodyMedium
+                                            ?.copyWith(color: Stardew.ink),
+                                      ),
+                                    ),
+                                  Padding(
+                                    padding: const EdgeInsets.only(top: 6),
+                                    child: _info(
+                                      Icons.event,
+                                      overdue
+                                          ? '$dateText (overdue)'
+                                          : dateText,
+                                      color: overdue
+                                          ? Stardew.red
+                                          : Stardew.mutedInk,
+                                      size: 14,
+                                    ),
+                                  ),
+                                  if (badges.isNotEmpty)
+                                    Padding(
+                                      padding: const EdgeInsets.only(top: 8),
+                                      child: Wrap(
+                                        spacing: 6,
+                                        runSpacing: 6,
+                                        children: badges,
+                                      ),
+                                    ),
+                                  if (task.location.trim().isNotEmpty)
+                                    Padding(
+                                      padding: const EdgeInsets.only(top: 8),
+                                      child: _info(Icons.place_outlined,
+                                          task.location.trim()),
+                                    ),
+                                  if (task.assignedTo.trim().isNotEmpty)
+                                    Padding(
+                                      padding: const EdgeInsets.only(top: 4),
+                                      child: _info(Icons.person_outline,
+                                          task.assignedTo.trim()),
+                                    ),
+                                  if (task.notes.trim().isNotEmpty)
+                                    Padding(
+                                      padding: const EdgeInsets.only(top: 8),
+                                      child: Text(
+                                        'Notes: ${task.notes.trim()}',
+                                        textAlign: TextAlign.left,
+                                        softWrap: true,
+                                        style: textTheme.bodySmall?.copyWith(
+                                          fontStyle: FontStyle.italic,
+                                          color: Stardew.mutedInk,
+                                        ),
+                                      ),
+                                    ),
+                                ],
                               ),
                             ),
-                          if (infos.isNotEmpty)
-                            Padding(
-                              padding: const EdgeInsets.only(top: 6),
-                              child: Wrap(
-                                spacing: 12,
-                                runSpacing: 2,
-                                children: infos,
-                              ),
-                            ),
-                          if (task.notes.trim().isNotEmpty)
-                            Padding(
-                              padding: const EdgeInsets.only(top: 6),
-                              child: Text(
-                                'Notes: ${task.notes}',
-                                textAlign: TextAlign.left,
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                                style: textTheme.bodySmall?.copyWith(
-                                  fontStyle: FontStyle.italic,
-                                  color: Stardew.mutedInk,
-                                ),
-                              ),
-                            ),
+                          ),
+                          IconButton(
+                            tooltip: 'Edit task',
+                            icon: const Icon(Icons.edit_outlined,
+                                color: Stardew.wood),
+                            onPressed: () =>
+                                showTaskFormDialog(context, task: task),
+                          ),
                         ],
                       ),
-                    ),
-                    trailing: IconButton(
-                      tooltip: 'Edit task',
-                      icon: const Icon(Icons.edit_outlined,
-                          color: Stardew.wood),
-                      onPressed: () =>
-                          showTaskFormDialog(context, task: task),
                     ),
                   ),
                 ),

@@ -5,11 +5,42 @@ import 'package:hive_flutter/hive_flutter.dart';
 import '../data/task_repository.dart';
 import '../models/task.dart';
 import '../theme/app_theme.dart';
+import '../utils/date_format.dart';
 import '../widgets/task_form_dialog.dart';
 import '../widgets/task_tile.dart';
 
-class HomeScreen extends StatelessWidget {
+class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
+
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  final TextEditingController _searchController = TextEditingController();
+  String _query = '';
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  /// True if the search text appears in any field of the task.
+  bool _matches(Task t, String q) {
+    final haystack = [
+      t.title,
+      t.description,
+      t.category,
+      t.priority,
+      t.location,
+      t.assignedTo,
+      t.time,
+      t.notes,
+      formatDate(t.date),
+    ].join(' ').toLowerCase();
+    return haystack.contains(q);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -45,45 +76,57 @@ class HomeScreen extends StatelessWidget {
       body: ValueListenableBuilder<Box<Task>>(
         valueListenable: TaskRepository.box.listenable(),
         builder: (context, box, _) {
-          final tasks = TaskRepository.getAll();
+          final all = TaskRepository.getAll();
 
-          if (tasks.isEmpty) {
+          if (all.isEmpty) {
             return const _EmptyState();
           }
 
-          final done = tasks.where((t) => t.isDone).length;
+          final q = _query.trim().toLowerCase();
+          final tasks =
+              q.isEmpty ? all : all.where((t) => _matches(t, q)).toList();
 
           return Column(
             children: [
-              _QuestBoard(done: done, total: tasks.length),
+              _SearchBar(
+                controller: _searchController,
+                onChanged: (v) => setState(() => _query = v),
+                onClear: () {
+                  _searchController.clear();
+                  setState(() => _query = '');
+                },
+              ),
               Expanded(
-                child: ListView.builder(
-                  padding: const EdgeInsets.only(top: 6, bottom: 100),
-                  itemCount: tasks.length,
-                  itemBuilder: (context, index) {
-                    final task = tasks[index];
-                    return Dismissible(
-                      key: ValueKey(task.key),
-                      direction: DismissDirection.endToStart,
-                      background: Container(
-                        margin: const EdgeInsets.symmetric(
-                            horizontal: 16, vertical: 7),
-                        padding: const EdgeInsets.only(right: 24),
-                        alignment: Alignment.centerRight,
-                        decoration: BoxDecoration(
-                          color: Stardew.red,
-                          borderRadius: BorderRadius.circular(6),
-                          border:
-                              Border.all(color: Stardew.woodDark, width: 3),
-                        ),
-                        child: const Icon(Icons.delete_outline,
-                            color: Colors.white),
+                child: tasks.isEmpty
+                    ? _NoResults(query: _query.trim())
+                    : ListView.builder(
+                        padding: const EdgeInsets.only(top: 6, bottom: 100),
+                        itemCount: tasks.length,
+                        itemBuilder: (context, index) {
+                          final task = tasks[index];
+                          return Dismissible(
+                            key: ValueKey(task.key),
+                            direction: DismissDirection.endToStart,
+                            background: Container(
+                              margin: const EdgeInsets.symmetric(
+                                  horizontal: 16, vertical: 7),
+                              padding: const EdgeInsets.only(right: 24),
+                              alignment: Alignment.centerRight,
+                              decoration: BoxDecoration(
+                                color: Stardew.red,
+                                borderRadius: BorderRadius.circular(6),
+                                border: Border.all(
+                                    color: Stardew.woodDark, width: 3),
+                              ),
+                              child: const Icon(Icons.delete_outline,
+                                  color: Colors.white),
+                            ),
+                            onDismissed: (_) =>
+                                _deleteWithUndo(context, task),
+                            child: TaskTile(task: task),
+                          );
+                        },
                       ),
-                      onDismissed: (_) => _deleteWithUndo(context, task),
-                      child: TaskTile(task: task),
-                    );
-                  },
-                ),
               ),
             ],
           );
@@ -130,66 +173,97 @@ class HomeScreen extends StatelessWidget {
   }
 }
 
-/// Small parchment board showing how many tasks are finished.
-class _QuestBoard extends StatelessWidget {
-  final int done;
-  final int total;
+/// Search box shown above the task list.
+class _SearchBar extends StatelessWidget {
+  final TextEditingController controller;
+  final ValueChanged<String> onChanged;
+  final VoidCallback onClear;
 
-  const _QuestBoard({required this.done, required this.total});
+  const _SearchBar({
+    required this.controller,
+    required this.onChanged,
+    required this.onClear,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 14, 16, 4),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(6),
+        boxShadow: Stardew.pixelShadow,
+      ),
+      child: TextField(
+        controller: controller,
+        onChanged: onChanged,
+        textAlign: TextAlign.left,
+        decoration: InputDecoration(
+          hintText: 'Search tasks...',
+          hintStyle: const TextStyle(color: Stardew.mutedInk),
+          prefixIcon: const Icon(Icons.search),
+          suffixIcon: controller.text.isEmpty
+              ? null
+              : IconButton(
+                  tooltip: 'Clear',
+                  icon: const Icon(Icons.close),
+                  onPressed: onClear,
+                ),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(6),
+            borderSide: const BorderSide(color: Stardew.woodDark, width: 3),
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(6),
+            borderSide: const BorderSide(color: Stardew.woodDark, width: 3),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(6),
+            borderSide: const BorderSide(color: Stardew.grassDark, width: 3),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Shown when the search finds nothing.
+class _NoResults extends StatelessWidget {
+  final String query;
+
+  const _NoResults({required this.query});
 
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
-    final fraction = total == 0 ? 0.0 : done / total;
-    final allDone = total > 0 && done == total;
 
-    return Container(
-      width: double.infinity,
-      margin: const EdgeInsets.fromLTRB(16, 14, 16, 4),
-      padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
-      decoration: BoxDecoration(
-        color: Stardew.parchment,
-        borderRadius: BorderRadius.circular(6),
-        border: Border.all(color: Stardew.woodDark, width: 3),
-        boxShadow: Stardew.pixelShadow,
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              const Icon(Icons.star, color: Stardew.gold, size: 20),
-              const SizedBox(width: 6),
-              Expanded(
-                child: Text(
-                  allDone
-                      ? 'All quests complete!'
-                      : 'Quests done: $done / $total',
-                  textAlign: TextAlign.left,
-                  style: textTheme.titleMedium
-                      ?.copyWith(fontWeight: FontWeight.w700),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Container(
-            height: 16,
-            decoration: BoxDecoration(
-              color: Stardew.parchmentLight,
-              border: Border.all(color: Stardew.woodDark, width: 2),
-              borderRadius: BorderRadius.circular(3),
+    return Align(
+      alignment: Alignment.topCenter,
+      child: Container(
+        width: double.infinity,
+        margin: const EdgeInsets.fromLTRB(16, 14, 16, 0),
+        padding: const EdgeInsets.all(18),
+        decoration: BoxDecoration(
+          color: Stardew.parchment,
+          borderRadius: BorderRadius.circular(6),
+          border: Border.all(color: Stardew.woodDark, width: 3),
+          boxShadow: Stardew.pixelShadow,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'No matching tasks',
+              textAlign: TextAlign.left,
+              style: textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
             ),
-            child: Align(
-              alignment: Alignment.centerLeft,
-              child: FractionallySizedBox(
-                widthFactor: fraction,
-                heightFactor: 1,
-                child: Container(color: Stardew.grass),
-              ),
+            const SizedBox(height: 6),
+            Text(
+              'Nothing found for "$query".',
+              textAlign: TextAlign.left,
+              style: textTheme.bodyMedium?.copyWith(color: Stardew.mutedInk),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

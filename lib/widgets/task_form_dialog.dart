@@ -138,6 +138,7 @@ class _TaskFormDialogState extends State<TaskFormDialog> {
   }
 
   /// One optional text field with a consistent look.
+   /// One optional text field with a consistent look.
   Widget _field(
     TextEditingController controller,
     String label,
@@ -145,11 +146,14 @@ class _TaskFormDialogState extends State<TaskFormDialog> {
     int maxLines = 1,
     int maxLength = 100,
   }) {
+    final multiline = maxLines > 1;
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: TextFormField(
         controller: controller,
-        maxLines: maxLines,
+        // Multiline boxes start at 2 lines and grow as you type.
+        minLines: multiline ? maxLines : 1,
+        maxLines: multiline ? null : 1,
         maxLength: maxLength,
         textAlign: TextAlign.left,
         textCapitalization: TextCapitalization.sentences,
@@ -161,7 +165,6 @@ class _TaskFormDialogState extends State<TaskFormDialog> {
       ),
     );
   }
-
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
