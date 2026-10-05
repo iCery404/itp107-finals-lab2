@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 import '../data/task_repository.dart';
 import '../models/task.dart';
+import '../theme/app_theme.dart';
 import '../utils/date_format.dart';
 
 /// Opens the add/edit dialog. Pass [task] to edit, leave null to create.
@@ -111,6 +113,30 @@ class _TaskFormDialogState extends State<TaskFormDialog> {
     Navigator.of(context).pop();
   }
 
+  /// Small section heading with a wooden divider line.
+  Widget _section(String text) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 6, bottom: 10),
+      child: Row(
+        children: [
+          Text(
+            text,
+            textAlign: TextAlign.left,
+            style: const TextStyle(
+              fontWeight: FontWeight.w700,
+              fontSize: 14,
+              color: Stardew.woodDark,
+            ),
+          ),
+          const SizedBox(width: 8),
+          const Expanded(
+            child: Divider(color: Stardew.wood, thickness: 2, height: 2),
+          ),
+        ],
+      ),
+    );
+  }
+
   /// One optional text field with a consistent look.
   Widget _field(
     TextEditingController controller,
@@ -125,6 +151,7 @@ class _TaskFormDialogState extends State<TaskFormDialog> {
         controller: controller,
         maxLines: maxLines,
         maxLength: maxLength,
+        textAlign: TextAlign.left,
         textCapitalization: TextCapitalization.sentences,
         decoration: InputDecoration(
           labelText: label,
@@ -137,27 +164,55 @@ class _TaskFormDialogState extends State<TaskFormDialog> {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-
     return AlertDialog(
-      backgroundColor: scheme.surface,
-      title: Text(_isEditing ? 'Edit task' : 'New task'),
+      backgroundColor: Stardew.parchment,
+      clipBehavior: Clip.antiAlias,
+      titlePadding: EdgeInsets.zero,
+      contentPadding: const EdgeInsets.fromLTRB(20, 16, 20, 4),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(8),
+        side: const BorderSide(color: Stardew.woodDark, width: 4),
+      ),
+      // Wooden sign header
+      title: WoodPlank(
+        padding: const EdgeInsets.fromLTRB(22, 18, 22, 18),
+        child: Row(
+          children: [
+            const PixelSprout(cell: 3),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                _isEditing ? 'Edit task' : 'New task',
+                textAlign: TextAlign.left,
+                style: GoogleFonts.pressStart2p(
+                  fontSize: 13,
+                  color: Stardew.parchmentLight,
+                  shadows: const [
+                    Shadow(color: Stardew.woodDark, offset: Offset(2, 2)),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
       content: SizedBox(
         width: 420,
         child: Form(
           key: _formKey,
           child: SingleChildScrollView(
-            padding: const EdgeInsets.only(top: 8),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                _section('The quest'),
                 Padding(
                   padding: const EdgeInsets.only(bottom: 12),
                   child: TextFormField(
                     controller: _title,
                     autofocus: true,
                     maxLength: 100,
+                    textAlign: TextAlign.left,
                     textCapitalization: TextCapitalization.sentences,
                     decoration: const InputDecoration(
                       labelText: 'Task title *',
@@ -175,31 +230,40 @@ class _TaskFormDialogState extends State<TaskFormDialog> {
                 _field(_description, 'Description', Icons.notes,
                     maxLines: 2, maxLength: 200),
                 _field(_category, 'Category', Icons.label_outline),
-                _field(_priority, 'Priority (e.g. High)', Icons.flag_outlined),
+                _field(_priority, 'Priority (High / Medium / Low)',
+                    Icons.flag_outlined),
+                _section('Where and who'),
                 _field(_location, 'Location', Icons.place_outlined),
                 _field(_assignedTo, 'Assigned to', Icons.person_outline),
+                _section('When'),
                 _field(_time, 'Time (e.g. 3:00 PM)', Icons.schedule),
-                _field(_notes, 'Notes', Icons.sticky_note_2_outlined,
-                    maxLines: 2, maxLength: 200),
-                InkWell(
-                  borderRadius: BorderRadius.circular(12),
-                  onTap: _pickDate,
-                  child: InputDecorator(
-                    decoration: const InputDecoration(
-                      labelText: 'Date',
-                      prefixIcon: Icon(Icons.calendar_today_outlined),
-                    ),
-                    child: Text(
-                      formatDate(_selectedDate),
-                      style: TextStyle(color: scheme.onSurface),
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(4),
+                    onTap: _pickDate,
+                    child: InputDecorator(
+                      decoration: const InputDecoration(
+                        labelText: 'Date',
+                        prefixIcon: Icon(Icons.calendar_today_outlined),
+                      ),
+                      child: Text(
+                        formatDate(_selectedDate),
+                        textAlign: TextAlign.left,
+                        style: const TextStyle(color: Stardew.ink),
+                      ),
                     ),
                   ),
                 ),
+                _section('Extras'),
+                _field(_notes, 'Notes', Icons.sticky_note_2_outlined,
+                    maxLines: 2, maxLength: 200),
               ],
             ),
           ),
         ),
       ),
+      actionsPadding: const EdgeInsets.fromLTRB(16, 4, 16, 14),
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
