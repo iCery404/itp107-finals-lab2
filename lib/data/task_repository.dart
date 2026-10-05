@@ -18,14 +18,21 @@ class TaskRepository {
   }
 
   /// CREATE
-  static Future<void> add(String title, DateTime date) async {
-    await box.add(Task(title: title.trim(), date: date));
+  static Future<void> add(Task task) async {
+    await box.add(task);
   }
 
-  /// UPDATE
-  static Future<void> update(Task task, String title, DateTime date) async {
-    task.title = title.trim();
-    task.date = date;
+  /// UPDATE - copy the edited values into the stored task and save.
+  static Future<void> update(Task task, Task edited) async {
+    task.title = edited.title;
+    task.date = edited.date;
+    task.description = edited.description;
+    task.category = edited.category;
+    task.priority = edited.priority;
+    task.location = edited.location;
+    task.assignedTo = edited.assignedTo;
+    task.time = edited.time;
+    task.notes = edited.notes;
     await task.save();
   }
 

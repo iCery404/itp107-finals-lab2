@@ -23,7 +23,15 @@ class TaskFormDialog extends StatefulWidget {
 
 class _TaskFormDialogState extends State<TaskFormDialog> {
   final _formKey = GlobalKey<FormState>();
-  late final TextEditingController _titleController;
+
+  late final TextEditingController _title;
+  late final TextEditingController _description;
+  late final TextEditingController _category;
+  late final TextEditingController _priority;
+  late final TextEditingController _location;
+  late final TextEditingController _assignedTo;
+  late final TextEditingController _time;
+  late final TextEditingController _notes;
   late DateTime _selectedDate;
 
   bool get _isEditing => widget.task != null;
@@ -31,13 +39,32 @@ class _TaskFormDialogState extends State<TaskFormDialog> {
   @override
   void initState() {
     super.initState();
-    _titleController = TextEditingController(text: widget.task?.title ?? '');
-    _selectedDate = widget.task?.date ?? DateTime.now();
+    final t = widget.task;
+    _title = TextEditingController(text: t?.title ?? '');
+    _description = TextEditingController(text: t?.description ?? '');
+    _category = TextEditingController(text: t?.category ?? '');
+    _priority = TextEditingController(text: t?.priority ?? '');
+    _location = TextEditingController(text: t?.location ?? '');
+    _assignedTo = TextEditingController(text: t?.assignedTo ?? '');
+    _time = TextEditingController(text: t?.time ?? '');
+    _notes = TextEditingController(text: t?.notes ?? '');
+    _selectedDate = t?.date ?? DateTime.now();
   }
 
   @override
   void dispose() {
-    _titleController.dispose();
+    for (final c in [
+      _title,
+      _description,
+      _category,
+      _priority,
+      _location,
+      _assignedTo,
+      _time,
+      _notes,
+    ]) {
+      c.dispose();
+    }
     super.dispose();
   }
 
@@ -63,14 +90,49 @@ class _TaskFormDialogState extends State<TaskFormDialog> {
     // Validation: title must not be empty.
     if (!_formKey.currentState!.validate()) return;
 
-    final title = _titleController.text;
+    final values = Task(
+      title: _title.text.trim(),
+      date: _selectedDate,
+      description: _description.text.trim(),
+      category: _category.text.trim(),
+      priority: _priority.text.trim(),
+      location: _location.text.trim(),
+      assignedTo: _assignedTo.text.trim(),
+      time: _time.text.trim(),
+      notes: _notes.text.trim(),
+    );
+
     if (_isEditing) {
-      await TaskRepository.update(widget.task!, title, _selectedDate);
+      await TaskRepository.update(widget.task!, values);
     } else {
-      await TaskRepository.add(title, _selectedDate);
+      await TaskRepository.add(values);
     }
     if (!mounted) return;
     Navigator.of(context).pop();
+  }
+
+  /// One optional text field with a consistent look.
+  Widget _field(
+    TextEditingController controller,
+    String label,
+    IconData icon, {
+    int maxLines = 1,
+    int maxLength = 100,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: TextFormField(
+        controller: controller,
+        maxLines: maxLines,
+        maxLength: maxLength,
+        textCapitalization: TextCapitalization.sentences,
+        decoration: InputDecoration(
+          labelText: label,
+          prefixIcon: Icon(icon),
+          counterText: '',
+        ),
+      ),
+    );
   }
 
   @override
@@ -80,47 +142,61 @@ class _TaskFormDialogState extends State<TaskFormDialog> {
     return AlertDialog(
       backgroundColor: scheme.surface,
       title: Text(_isEditing ? 'Edit task' : 'New task'),
-      content: Form(
-        key: _formKey,
-        child: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              TextFormField(
-                controller: _titleController,
-                autofocus: true,
-                maxLength: 100,
-                textCapitalization: TextCapitalization.sentences,
-                textInputAction: TextInputAction.done,
-                decoration: const InputDecoration(
-                  labelText: 'Task title',
-                  prefixIcon: Icon(Icons.edit_note),
-                ),
-                validator: (value) {
-                  if (value == null || value.trim().isEmpty) {
-                    return 'Please enter a task title';
-                  }
-                  return null;
-                },
-                onFieldSubmitted: (_) => _save(),
-              ),
-              const SizedBox(height: 8),
-              InkWell(
-                borderRadius: BorderRadius.circular(12),
-                onTap: _pickDate,
-                child: InputDecorator(
-                  decoration: const InputDecoration(
-                    labelText: 'Date',
-                    prefixIcon: Icon(Icons.calendar_today_outlined),
-                  ),
-                  child: Text(
-                    formatDate(_selectedDate),
-                    style: TextStyle(color: scheme.onSurface),
+      content: SizedBox(
+        width: 420,
+        child: Form(
+          key: _formKey,
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.only(top: 8),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: TextFormField(
+                    controller: _title,
+                    autofocus: true,
+                    maxLength: 100,
+                    textCapitalization: TextCapitalization.sentences,
+                    decoration: const InputDecoration(
+                      labelText: 'Task title *',
+                      prefixIcon: Icon(Icons.edit_note),
+                      counterText: '',
+                    ),
+                    validator: (value) {
+                      if (value == null || value.trim().isEmpty) {
+                        return 'Please enter a task title';
+                      }
+                      return null;
+                    },
                   ),
                 ),
-              ),
-            ],
+                _field(_description, 'Description', Icons.notes,
+                    maxLines: 2, maxLength: 200),
+                _field(_category, 'Category', Icons.label_outline),
+                _field(_priority, 'Priority (e.g. High)', Icons.flag_outlined),
+                _field(_location, 'Location', Icons.place_outlined),
+                _field(_assignedTo, 'Assigned to', Icons.person_outline),
+                _field(_time, 'Time (e.g. 3:00 PM)', Icons.schedule),
+                _field(_notes, 'Notes', Icons.sticky_note_2_outlined,
+                    maxLines: 2, maxLength: 200),
+                InkWell(
+                  borderRadius: BorderRadius.circular(12),
+                  onTap: _pickDate,
+                  child: InputDecorator(
+                    decoration: const InputDecoration(
+                      labelText: 'Date',
+                      prefixIcon: Icon(Icons.calendar_today_outlined),
+                    ),
+                    child: Text(
+                      formatDate(_selectedDate),
+                      style: TextStyle(color: scheme.onSurface),
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),

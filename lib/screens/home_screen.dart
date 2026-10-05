@@ -76,9 +76,8 @@ class HomeScreen extends StatelessWidget {
   }
 
   Future<void> _deleteWithUndo(BuildContext context, Task task) async {
-    final title = task.title;
-    final date = task.date;
-    final isDone = task.isDone;
+    // Keep a full copy so Undo restores every field.
+    final backup = task.copy();
 
     final messenger = ScaffoldMessenger.of(context);
 
@@ -87,12 +86,11 @@ class HomeScreen extends StatelessWidget {
     messenger.clearSnackBars();
     messenger.showSnackBar(
       SnackBar(
-        content: Text('Deleted "$title"'),
+        content: Text('Deleted "${backup.title}"'),
         action: SnackBarAction(
           label: 'Undo',
           onPressed: () async {
-            final restored = Task(title: title, date: date, isDone: isDone);
-            await TaskRepository.box.add(restored);
+            await TaskRepository.box.add(backup);
           },
         ),
       ),
